@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-const authMiddleware = require('../authMiddleaware');
-
 // 새로운 매칭 정보 생성 (userId를 요청 바디에서 받아 생성)
 router.post('/create_matching_data', async (req, res) => {
     const userId = req.body.userId; // 요청 바디에서 userId 추출

@@ -10,7 +10,7 @@ const planRouter = require('./routes/mlt_plan');
 require('dotenv').config();
 
 const app = express();
-
+ 
 app.use(express.json());
 
 const { swaggerUi, specs } = require("./swagger/swagger")

@@ -7,7 +7,7 @@ const db = require('../db');
 router.post('/planning', async (req, res) => {
     try {
         const [result] = await db.query(
-            'INSERT INTO plan (title, description, poster_image_url, location) VALUES (NULL, NULL, NULL, NULL)'
+            'INSERT INTO plan (title, description, poster_image_url, location, start_date, end_date) VALUES (NULL, NULL, NULL, NULL, NULL, NULL)'
         );
         res.status(201).json({ id: result.insertId });
     } catch (error) {
@@ -136,6 +136,66 @@ router.get('/plan/:id/location', async (req, res) => {
     }
 });
 
+// Plan 시작 날짜 업데이트 API
+router.put('/plan/:id/start-date', async (req, res) => {
+    const { id } = req.params;
+    const { startDate } = req.body; // YYYY-MM-DD 형식으로 전달
+    try {
+        await db.query(
+            'UPDATE plan SET start_date = ? WHERE id = ?',
+            [startDate, id]
+        );
+        res.status(200).json({ message: '시작 날짜가 업데이트되었습니다.' });
+    } catch (error) {
+        res.status(500).json({ error: '데이터 업데이트 중 오류 발생' });
+    }
+});
+
+// Plan 시작 날짜 가져오기 API
+router.get('/plan/:id/start-date', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await db.query('SELECT start_date FROM plan WHERE id = ?', [id]);
+        if (rows.length > 0) {
+            res.status(200).json({ startDate: rows[0].start_date });
+        } else {
+            res.status(404).json({ error: 'Plan을 찾을 수 없습니다.' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: '데이터 조회 중 오류 발생' });
+    }
+});
+
+// Plan 종료 날짜 업데이트 API
+router.put('/plan/:id/end-date', async (req, res) => {
+    const { id } = req.params;
+    const { endDate } = req.body; // YYYY-MM-DD 형식으로 전달
+    try {
+        await db.query(
+            'UPDATE plan SET end_date = ? WHERE id = ?',
+            [endDate, id]
+        );
+        res.status(200).json({ message: '종료 날짜가 업데이트되었습니다.' });
+    } catch (error) {
+        res.status(500).json({ error: '데이터 업데이트 중 오류 발생' });
+    }
+});
+
+// Plan 종료 날짜 가져오기 API
+router.get('/plan/:id/end-date', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await db.query('SELECT end_date FROM plan WHERE id = ?', [id]);
+        if (rows.length > 0) {
+            res.status(200).json({ endDate: rows[0].end_date });
+        } else {
+            res.status(404).json({ error: 'Plan을 찾을 수 없습니다.' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: '데이터 조회 중 오류 발생' });
+    }
+});
+
 
 // Exhibition List 생성 API (다른 정보들은 NULL로 설정)
 router.post('/exhib_list', async (req, res) => {
@@ -155,47 +215,7 @@ router.post('/exhib_list', async (req, res) => {
 });
 
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, 'uploads/'); 
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
 
-/* 파일 저장 경로와 파일 이름 설정
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, 'uploads/'); // 이미지가 저장될 폴더
-    },
-    filename: (req, file, cb) => {
-      cb(null, `${Date.now()}-${file.originalname}`); // 파일 이름을 고유하게 저장하기 위해 타임스탬프 사용
-    },
-  });
-  
-  // multer 설정
-  const upload = multer({ storage });
-  
-  // 이미지 업로드 API
-  app.post('/upload', upload.single('image'), (req, res) => {
-    try {
-      // 파일이 업로드 되었는지 확인
-      if (!req.file) {
-        return res.status(400).send('No file uploaded.');
-      }
-  
-      // 이미지 URL 생성
-      const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-      
-      // 클라이언트에 이미지 URL 반환
-      res.json({ imageUrl });
-    } catch (err) {
-      res.status(500).send('Server Error');
-    }
-  });
-*/
 
 
 // Exhibition List 작품 이미지 URL 업데이트 API
@@ -288,6 +308,53 @@ router.get('/exhib_list/:id/artwork_description', async (req, res) => {
     }
 });
 
+// 지출 내용 추가 API
+router.post('/expense', async (req, res) => {
+    const { plan_id, description, amount } = req.body;
+
+    // 데이터 검증 (필요 시 확장 가능)
+    if (!plan_id || !description || !amount) {
+        return res.status(400).json({ error: '모든 필드(plan_id, description, amount)는 필수입니다.' });
+    }
+
+    try {
+        // 데이터베이스에 데이터 추가
+        await db.query(
+            'INSERT INTO expense (plan_id, description, amount) VALUES (?, ?, ?)',
+            [plan_id, description, amount]
+        );
+        res.status(201).json({ message: '지출 내용이 추가되었습니다.' });
+    } catch (error) {
+        console.error('DB 오류:', error);
+        res.status(500).json({ error: '지출 내용을 추가하는 중 오류가 발생했습니다.' });
+    }
+});
+
+
+// 특정 plan_id의 지출 정보 가져오기 API
+router.get('/expense/:plan_id', async (req, res) => {
+    const { plan_id } = req.params;
+
+    try {
+        // 데이터베이스에서 지출 정보 조회
+        const [rows] = await db.query(
+            'SELECT id, plan_id, description, amount, created_at FROM expense WHERE plan_id = ?',
+            [plan_id]
+        );
+
+        if (rows.length > 0) {
+            res.status(200).json({ expenses: rows });
+        } else {
+            res.status(404).json({ error: '해당 plan_id와 관련된 지출 정보가 없습니다.' });
+        }
+    } catch (error) {
+        console.error('DB 오류:', error);
+        res.status(500).json({ error: '지출 정보를 가져오는 중 오류가 발생했습니다.' });
+    }
+});
+
+
+
 // Notes 생성 API (다른 정보들은 NULL로 설정)
 router.post('/notes', async (req, res) => {
     const { plan_id } = req.body; 
@@ -345,5 +412,7 @@ router.delete('/notes/:id', async (req, res) => {
         res.status(500).json({ error: '데이터 삭제 중 오류 발생' });
     }
 });
+
+
 
 module.exports = router;
