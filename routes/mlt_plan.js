@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 
 // Plan 생성 API (다른 정보들은 NULL로 설정)
 router.post('/planning', async (req, res) => {
@@ -214,9 +216,37 @@ router.post('/exhib_list', async (req, res) => {
     }
 });
 
+// 업로드 폴더 설정
+const uploadFolder = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadFolder)) {
+  fs.mkdirSync(uploadFolder);
+}
 
+// Multer 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadFolder); // 파일 저장 경로
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName); // 파일명 설정
+  },
+});
 
+const upload = multer({ storage });
 
+// 파일 업로드 API
+router.post('/upload', upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
+    }
+  
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    res.json({
+      message: '파일이 성공적으로 업로드되었습니다.',
+      fileUrl,
+    });
+  });
 
 // Exhibition List 작품 이미지 URL 업데이트 API
 router.put('/exhib_list/:id/artwork_image_url', async (req, res) => {

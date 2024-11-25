@@ -618,5 +618,40 @@
 *           description: Notes 삭제 성공
 *         500:
 *           description: 데이터 삭제 중 오류 발생
+* /upload:
+*   post:
+*     summary: 파일 업로드
+*     description: 사용자가 파일을 업로드하고, 업로드된 파일의 URL을 반환합니다.
+*     tags: [File]
+*     requestBody:
+*       required: true
+*       content:
+*         multipart/form-data:
+*           schema:
+*             type: object
+*             properties:
+*               file:
+*                 type: string
+*                 format: binary
+*                 description: 업로드할 파일
+*     responses:
+*       200:
+*         description: 파일 업로드 성공
+*         content:
+*           application/json:
+*             schema:
+*               $ref: '#/components/schemas/FileUploadResponse'
+*       400:
+*         description: 파일이 업로드되지 않았음
+*         content:
+*           application/json:
+*             schema:
+*               type: object
+*               properties:
+*                 error:
+*                   type: string
+*                   description: 오류 메시지
+*                   example: 파일이 업로드되지 않았습니다.
 */
+
 
